@@ -15,14 +15,15 @@ class GeneralAttack:
     
     def make_initial_adversarial(self, sampled_row, perturbation, classifier):
         lst = sampled_row.tolist().copy() #removed [0]
-        logger.info(f"initial sample: {lst}") 
+        logger.info(f"initial sample: {lst}")
+    
         adv_indices = [i for i, x in enumerate(lst) if x == 0] # Track Indices
         logger.info(f"Identified features to perturb: {len(adv_indices)}") 
 
         adversarial_sample = list(map(lambda x: x+perturbation if x==0 else x, lst))
         logger.info(f"perturbed sample: {adversarial_sample}")
         prediction = GeneralAttack().make_pred(adversarial_sample, classifier) 
-            
+                
         if prediction == 0: 
             logger.info("Initial perturbation successful") 
             return adversarial_sample, adv_indices
@@ -51,14 +52,14 @@ class GeneralAttack:
     def optimize(self, sample, final_adversarial_sample,final_adv_indices, classifier): 
                     
         logger.info(f"final adversarial indices to check: {len(final_adv_indices)}")
+        
         for j in final_adv_indices: ## trace all the features that removing the perturbation caused incorrect prediction
             while final_adversarial_sample[j]>sample[j]: 
                 final_adversarial_sample[j] -= 1
                 if GeneralAttack().make_pred(final_adversarial_sample, classifier) == 1: 
                     final_adversarial_sample[j] +=1
                     break
-                    
-                        
+                   
         logger.info(f"Final Adversarial sample: {final_adversarial_sample} ")
         return final_adversarial_sample
 
