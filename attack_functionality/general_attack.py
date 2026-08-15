@@ -1,61 +1,77 @@
+'''
+This is the source code for the implementation of the adversarial attack which is the general additive perturbation attack. 
+The attack is based on 3 algorithms implemented in 4 methods 
+-> Make Initial Adversarial function 
+-> Semi optimize Adversarial function 
+-> Optimize function 
+'''
+
 from utils.logs import logger_module 
 import numpy as np 
 logger = logger_module(logger_name=__name__) 
 
 
 class GeneralAttack:
-
+    """Methods to generate an adversarial sample"""
+    
     def __init__(self):
-        self.l2_distances = []
+        self.l2_distances = [] #The final L2 Distances are saved in a list
     
     @staticmethod
     def make_pred(sample, classifier): 
+        """Returns the predicition of a classifier either a 1 or 0 (used for validation of the adversarial samples)"""
+        
         single_pred = classifier.predict([sample])
         return single_pred 
     
     def make_initial_adversarial(self, sampled_row, perturbation, classifier):
-        lst = sampled_row.tolist().copy() #removed [0]
-        logger.info(f"initial sample: {lst}")
+        """Generate an intial adversarial sample"""
+        
+        lst = sampled_row.tolist().copy() # convert the sample vector into a list 
+        logger.info(f"initial sample: {lst}") 
     
         adv_indices = [i for i, x in enumerate(lst) if x == 0] # Track Indices
-        logger.info(f"Identified features to perturb: {len(adv_indices)}") 
+        logger.info(f"Identified features to perturb: {len(adv_indices)}") # Identifies all of the 0s in the sample 
 
-        adversarial_sample = list(map(lambda x: x+perturbation if x==0 else x, lst))
-        logger.info(f"perturbed sample: {adversarial_sample}")
-        prediction = GeneralAttack().make_pred(adversarial_sample, classifier) 
+        adversarial_sample = list(map(lambda x: x+perturbation if x==0 else x, lst)) ## Perturbation being added 
+        logger.info(f"perturbed sample: {adversarial_sample}") 
+        prediction = GeneralAttack().make_pred(adversarial_sample, classifier) # Make a prediction of the saved sample 
                 
         if prediction == 0: 
             logger.info("Initial perturbation successful") 
-            return adversarial_sample, adv_indices
+            return adversarial_sample, adv_indices # return the initial adversarial sample 
         else: 
             logger.info("perturbation failed")
             return None, None
 
     def decrement_list(self, lst, perturbation, adversarial_indices, classifier):
+        """Start the optimization process because the first function applies a blanket perturbation"""
+        
         lst2 = lst.copy()
         final_adv_indices = [] # find all the features that have been perturbed.  
         logger.info(f"Identified indices to check if perturbation was necessary: {len(adversarial_indices)}")
         
         for j in adversarial_indices: 
-            lst2[j] -= perturbation 
-            check_pred = GeneralAttack().make_pred(lst2, classifier) 
-            if check_pred != 0:
-                lst2[j] += perturbation
+            lst2[j] -= perturbation # remove perturbation 
+            check_pred = GeneralAttack().make_pred(lst2, classifier)  
+            if check_pred != 0: # if prediction flips then the perturbation was necessary and it is added back. 
+                lst2[j] += perturbation 
                 final_adv_indices.append(j)  
         
         logger.info(f"{len(adversarial_indices) - len(final_adv_indices)} features were identified as uneccessary to perturb: features to be optimized: {len(final_adv_indices)} features")        
         
         logger.info(f"Semi Optimized sample: {lst2}")
-        return lst2, final_adv_indices ## Return final indices
+        return lst2, final_adv_indices ## Return final indices and semi optimized sample 
 
 
     def optimize(self, sample, final_adversarial_sample,final_adv_indices, classifier): 
+        """Final optimization function"""
                     
         logger.info(f"final adversarial indices to check: {len(final_adv_indices)}")
         
         for j in final_adv_indices: ## trace all the features that removing the perturbation caused incorrect prediction
-            while final_adversarial_sample[j]>sample[j]: 
-                final_adversarial_sample[j] -= 1
+            while final_adversarial_sample[j]>sample[j]:  
+                final_adversarial_sample[j] -= 1 ## remove API call to validate that pertutbation value is the most optimal 
                 if GeneralAttack().make_pred(final_adversarial_sample, classifier) == 1: 
                     final_adversarial_sample[j] +=1
                     break
@@ -65,6 +81,8 @@ class GeneralAttack:
 
 
     def generate_adversarial_sample(self, idx, candidates, perturbation, classifier):
+        """Creating an adversarial sample""" 
+        
         samples = candidates
         adversarial_samples = []
         l2_distances = []
