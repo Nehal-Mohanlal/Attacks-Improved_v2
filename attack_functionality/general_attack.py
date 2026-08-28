@@ -87,6 +87,8 @@ class GeneralAttack:
         adversarial_samples = []
         l2_distances = []
         successful_idx = []
+        feature_diffs = [] 
+        
         for i, sample in enumerate(samples):  
             adv, adversarial_indices = GeneralAttack().make_initial_adversarial(sample, perturbation, classifier)
             if adv is not None:
@@ -96,7 +98,12 @@ class GeneralAttack:
                 logger.info(f"l2 distance: {l2}")
                 l2_distances.append(float(l2))
                 successful_idx.append(idx[i]) 
-                adversarial_samples.append(final_adversarial_sample)      
+                adversarial_samples.append(final_adversarial_sample)     
+                np_sample = np.array(sample) 
+                np_adv_sample = np.array(final_adversarial_sample) 
+                
+                diff_sample_l0 = np.count_nonzero(np_adv_sample != np_sample)
+                feature_diffs.append(diff_sample_l0)          
                 logger.info(f"sample number: {i}/{len(samples)} complete")
             
         logger.info(f"L2 distances: {l2_distances}")    
@@ -106,5 +113,12 @@ class GeneralAttack:
         print(f"The average  l2 distance {average_l2} across {len(l2_distances)} samples")
         print(f"The biggest  l2 distance {max(l2_distances)} across {len(l2_distances)} samples")
         print(f"The smallest l2 distance {min(l2_distances)} across {len(l2_distances)} samples")
+        
+        average_feature_diff = sum(feature_diffs)/len(feature_diffs) 
+        
+        print(f"The average amount of features changed: {average_feature_diff}")
+        print(f"The biggest amount of features changed: {np.max(feature_diffs)}")
+        print(f"The least amount of features changed: {np.min(feature_diffs)}")
+       
         
         return adversarial_samples, successful_idx
